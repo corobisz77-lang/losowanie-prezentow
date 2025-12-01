@@ -2,30 +2,132 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>Losowanie prezentów ONLINE</title>
+<title>Losowanie prezentów – Świąteczna edycja 🎄</title>
+
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
 <style>
-    body { font-family: Arial; padding: 20px; max-width: 450px; margin: auto; }
-    input, button { width: 100%; padding: 10px; margin-top: 10px; }
-    #wynik { margin-top: 20px; background: #f0f0f0; padding: 10px; }
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
+            url('https://images.unsplash.com/photo-1544207240-5d1464b2c9d8?auto=format&fit=crop&w=1500&q=80');
+        background-size: cover;
+        background-position: center;
+        color: white;
+        text-align: center;
+        padding: 20px;
+        min-height: 100vh;
+    }
+
+    h2 {
+        font-size: 32px;
+        margin-top: 20px;
+        color: #ffe08a;
+        text-shadow: 0 0 10px #ff0000;
+    }
+
+    .card {
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(8px);
+        padding: 20px;
+        margin: auto;
+        margin-top: 20px;
+        border-radius: 15px;
+        width: 90%;
+        max-width: 450px;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        border: none;
+        margin-top: 10px;
+        font-size: 16px;
+    }
+
+    button {
+        margin-top: 15px;
+        padding: 12px;
+        width: 100%;
+        border-radius: 10px;
+        border: none;
+        background: #ff2f2f;
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+        transition: 0.3s;
+        box-shadow: 0 0 10px rgba(255,0,0,0.5);
+    }
+
+    button:hover {
+        background: #ff5555;
+        transform: scale(1.05);
+    }
+
+    #wynik {
+        margin-top: 20px;
+        background: rgba(255,255,255,0.25);
+        padding: 15px;
+        border-radius: 10px;
+        font-size: 20px;
+        font-weight: bold;
+        color: #fff7d1;
+        text-shadow: 0 0 10px #ff0000;
+    }
+
+    /* ❄️ animowany śnieg */
+    .snowflake {
+        position: fixed;
+        top: -10px;
+        color: white;
+        font-size: 1.2em;
+        opacity: 0.8;
+        animation: fall linear infinite;
+    }
+
+    @keyframes fall {
+        to {
+            transform: translateY(110vh) rotate(360deg);
+        }
+    }
 </style>
 </head>
 <body>
-<h2>Losowanie prezentów – ONLINE</h2>
-<p>Wpisz swoje imię (dokładnie jak na liście):</p>
-<input id="mojeImie" type="text" />
-<button onclick="losuj()">Losuj!</button>
-<div id="wynik"></div>
+
+<h2>🎅 Losowanie prezentów – Świąteczna edycja 🎄</h2>
+
+<div class="card">
+    <p>Wpisz swoje imię:</p>
+    <input id="mojeImie" type="text" placeholder="np. Bronek" />
+    <button onclick="losuj()">🎁 Wylosuj prezentodawcę!</button>
+    <div id="wynik"></div>
+</div>
 
 <script>
+// ❄️ GENEROWANIE ŚNIEGU
+for (let i = 0; i < 30; i++) {
+    let snow = document.createElement('div');
+    snow.className = 'snowflake';
+    snow.innerText = '❄';
+    snow.style.left = Math.random() * 100 + 'vw';
+    snow.style.animationDuration = 3 + Math.random() * 7 + 's';
+    snow.style.fontSize = (10 + Math.random() * 20) + 'px';
+    document.body.appendChild(snow);
+}
+
+
 // === LISTA OSÓB ===
 const osoby = [
   "Bogusia", "Bronek", "Małgorzata", "Paweł", "Julia", "Kamil",
   "Agnieszka", "Ewelina", "Mariusz", "Lucyna", "Daniel"
 ];
 
-// === OSOBY, KTÓRYCH NIE MOŻNA WZAIEMNIE LOSOWAĆ ===
+// === BLOKADY (kto kogo nie może wylosować) ===
 const blokady = {
   "Bogusia": ["Bronek"],
   "Bronek": ["Bogusia"],
@@ -39,41 +141,48 @@ const blokady = {
   "Daniel": ["Lucyna"]
 };
 
-// === KONFIGURACJA FIREBASE — UZUPEŁNIJ WŁASNYMI DANYMI ===
+// === KONFIGURACJA FIREBASE ===
 const firebaseConfig = {
   apiKey: "AIzaSyDCCpqTPCnMZ7Sda3lS1sC82q9HfZ9BRVc",
   authDomain: "losowanie-cd801.firebaseapp.com",
+  databaseURL: "https://losowanie-cd801-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "losowanie-cd801",
-  storageBucket: "losowanie-cd801.firebasestorage.app",
+  storageBucket: "losowanie-cd801.appspot.com",
   messagingSenderId: "309302443421",
   appId: "1:309302443421:web:7bc0bb3e5ce619d7c55275",
   measurementId: "G-SWK87N4Y4Q"
 };
 
-};
 
+// START Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Pobieranie wyników i puli
+
+// === Pobieranie danych ===
 async function pobierzDane() {
   const snap = await db.ref("losowanie").get();
+
   if (!snap.exists()) {
-    await db.ref("losowanie").set({
+    const start = {
       wyniki: {},
       dostepni: osoby
-    });
-    return { wyniki: {}, dostepni: [...osoby] };
+    };
+    await db.ref("losowanie").set(start);
+    return start;
   }
   return snap.val();
 }
 
+// === Zapisywanie wyników ===
 async function zapiszDane(wyniki, dostepni) {
   await db.ref("losowanie").set({ wyniki, dostepni });
 }
 
+// === LOSOWANIE ===
 async function losuj() {
   let imie = document.getElementById("mojeImie").value.trim();
+
   if (!imie) return alert("Wpisz swoje imię!");
   if (!osoby.includes(imie)) return alert("Nie ma takiej osoby w grze!");
 
@@ -81,12 +190,17 @@ async function losuj() {
 
   if (wyniki[imie]) {
     document.getElementById("wynik").innerText =
-      `Już wcześniej wylosowałeś: ${wyniki[imie]}`;
+      `Już wcześniej wylosowałeś: 🎁 ${wyniki[imie]}`;
     return;
   }
 
-  let mozliwe = dostepni.filter(o => o !== imie && !(blokady[imie] || []).includes(o));
-  if (mozliwe.length === 0) return alert("Brak osób do wylosowania!");
+  let mozliwe = dostepni.filter(o =>
+    o !== imie &&
+    !(blokady[imie] || []).includes(o)
+  );
+
+  if (mozliwe.length === 0)
+    return alert("Brak osób do wylosowania!");
 
   let wylosowane = mozliwe[Math.floor(Math.random() * mozliwe.length)];
 
@@ -95,8 +209,10 @@ async function losuj() {
 
   await zapiszDane(wyniki, dostepni);
 
-  document.getElementById("wynik").innerText = `Masz kupić prezent dla: ${wylosowane}`;
+  document.getElementById("wynik").innerText =
+    `✨ Wylosowałeś: 🎁 ${wylosowane}`;
 }
 </script>
+
 </body>
 </html>
