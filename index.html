@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Losowanie prezentów ONLINE</title>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<style>
+    body { font-family: Arial; padding: 20px; max-width: 450px; margin: auto; }
+    input, button { width: 100%; padding: 10px; margin-top: 10px; }
+    #wynik { margin-top: 20px; background: #f0f0f0; padding: 10px; }
+</style>
+</head>
+<body>
+<h2>Losowanie prezentów – ONLINE</h2>
+<p>Wpisz swoje imię (dokładnie jak na liście):</p>
+<input id="mojeImie" type="text" />
+<button onclick="losuj()">Losuj!</button>
+<div id="wynik"></div>
+
+<script>
+// === LISTA OSÓB ===
+const osoby = [
+  "Bogusia", "Bronek", "Małgorzata", "Paweł", "Julia", "Kamil",
+  "Agnieszka", "Ewelina", "Mariusz", "Lucyna", "Daniel"
+];
+
+// === OSOBY, KTÓRYCH NIE MOŻNA WZAIEMNIE LOSOWAĆ ===
+const blokady = {
+  "Bogusia": ["Bronek"],
+  "Bronek": ["Bogusia"],
+  "Paweł": ["Małgorzata"],
+  "Małgorzata": ["Paweł"],
+  "Julia": ["Kamil"],
+  "Kamil": ["Julia"],
+  "Ewelina": ["Mariusz"],
+  "Mariusz": ["Ewelina"],
+  "Lucyna": ["Daniel"],
+  "Daniel": ["Lucyna"]
+};
+
+// === KONFIGURACJA FIREBASE — UZUPEŁNIJ WŁASNYMI DANYMI ===
+const firebaseConfig = {
+  apiKey: "AIzaSyDCCpqTPCnMZ7Sda3lS1sC82q9HfZ9BRVc",
+  authDomain: "losowanie-cd801.firebaseapp.com",
+  projectId: "losowanie-cd801",
+  storageBucket: "losowanie-cd801.firebasestorage.app",
+  messagingSenderId: "309302443421",
+  appId: "1:309302443421:web:7bc0bb3e5ce619d7c55275",
+  measurementId: "G-SWK87N4Y4Q"
+};
+
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Pobieranie wyników i puli
+async function pobierzDane() {
+  const snap = await db.ref("losowanie").get();
+  if (!snap.exists()) {
+    await db.ref("losowanie").set({
+      wyniki: {},
+      dostepni: osoby
+    });
+    return { wyniki: {}, dostepni: [...osoby] };
+  }
+  return snap.val();
+}
+
+async function zapiszDane(wyniki, dostepni) {
+  await db.ref("losowanie").set({ wyniki, dostepni });
+}
+
+async function losuj() {
+  let imie = document.getElementById("mojeImie").value.trim();
+  if (!imie) return alert("Wpisz swoje imię!");
+  if (!osoby.includes(imie)) return alert("Nie ma takiej osoby w grze!");
+
+  let { wyniki, dostepni } = await pobierzDane();
+
+  if (wyniki[imie]) {
+    document.getElementById("wynik").innerText =
+      `Już wcześniej wylosowałeś: ${wyniki[imie]}`;
+    return;
+  }
+
+  let mozliwe = dostepni.filter(o => o !== imie && !(blokady[imie] || []).includes(o));
+  if (mozliwe.length === 0) return alert("Brak osób do wylosowania!");
+
+  let wylosowane = mozliwe[Math.floor(Math.random() * mozliwe.length)];
+
+  wyniki[imie] = wylosowane;
+  dostepni = dostepni.filter(o => o !== wylosowane);
+
+  await zapiszDane(wyniki, dostepni);
+
+  document.getElementById("wynik").innerText = `Masz kupić prezent dla: ${wylosowane}`;
+}
+</script>
+</body>
+</html>
