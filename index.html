@@ -2,24 +2,26 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🎁 Losowanie prezentów – Świąteczna edycja 🎄</title>
 
-<!-- Śnieg -->
 <style>
     body {
         margin: 0;
         font-family: 'Segoe UI', sans-serif;
         background: linear-gradient(135deg, #2c3e50, #4b79a1);
         height: 100vh;
-        overflow: hidden;
+        overflow-x: hidden;
         display: flex;
         justify-content: center;
         align-items: center;
+        padding: 20px;
     }
 
-    /* Świąteczna karta (glass) */
+    /* Świąteczna karta */
     .kartka {
-        width: 380px;
+        width: 100%;
+        max-width: 420px;
         padding: 25px;
         background: rgba(255, 255, 255, 0.15);
         border-radius: 20px;
@@ -28,6 +30,8 @@
         text-align: center;
         color: #fff;
         animation: fadeIn 1.2s ease;
+        position: relative;
+        z-index: 2;
     }
 
     @keyframes fadeIn {
@@ -77,17 +81,45 @@
         color: #ffe8c2;
     }
 
-    /* Śnieg */
+    /* Światła LED */
+    .led-line {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        display: flex;
+        justify-content: space-around;
+        pointer-events: none;
+        z-index: 3;
+    }
+
+    .led {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        animation: glow 1s infinite alternate;
+    }
+
+    .led:nth-child(odd) { background: red; }
+    .led:nth-child(even) { background: yellow; animation-delay: .5s; }
+
+    @keyframes glow {
+        from { box-shadow: 0 0 10px white; }
+        to { box-shadow: 0 0 25px white; transform: scale(1.2); }
+    }
+
+    /* Większy śnieg */
     .snowflake {
         position: fixed;
         top: -10px;
         color: white;
-        font-size: 18px;
-        opacity: 0.8;
+        font-size: 25px;
+        opacity: 0.9;
         animation-name: snow;
-        animation-duration: 10s;
-        animation-iteration-count: infinite;
         animation-timing-function: linear;
+        animation-iteration-count: infinite;
+        z-index: 1;
     }
 
     @keyframes snow {
@@ -95,20 +127,23 @@
         100% { transform: translateY(100vh) rotate(360deg); }
     }
 </style>
-
 </head>
 <body>
 
-<!-- Muzyka świąteczna -->
+<!-- ŚWIATEŁKA -->
+<div class="led-line">
+    <div class="led"></div><div class="led"></div><div class="led"></div>
+    <div class="led"></div><div class="led"></div><div class="led"></div>
+    <div class="led"></div><div class="led"></div><div class="led"></div>
+</div>
+
+<!-- MUZYKA -->
 <audio id="muzyka" autoplay loop>
     <source src="https://cdn.pixabay.com/download/audio/2022/12/07/audio_08fd5520ba.mp3?filename=christmas-magic-126379.mp3" type="audio/mpeg">
 </audio>
-
 <script>
-    // ściszenie muzyki
     document.getElementById("muzyka").volume = 0.15;
 </script>
-
 
 <div class="kartka">
     <h2>🎅 Losowanie prezentów 🎄</h2>
@@ -121,29 +156,29 @@
 </div>
 
 <script>
-    // Tworzenie animowanego śniegu
-    for (let i = 0; i < 40; i++) {
-        let sn = document.createElement("div");
-        sn.className = "snowflake";
-        sn.style.left = Math.random() * 100 + "vw";
-        sn.style.animationDelay = Math.random() * 5 + "s";
-        sn.innerHTML = "❄";
-        document.body.appendChild(sn);
+    /* DUŻY ŚNIEG */
+    function snow() {
+        let s = document.createElement("div");
+        s.className = "snowflake";
+        s.innerHTML = "❄";
+        s.style.left = Math.random() * 100 + "vw";
+        s.style.animationDuration = 6 + Math.random() * 4 + "s";
+        s.style.fontSize = 20 + Math.random() * 20 + "px";
+        document.body.appendChild(s);
+        setTimeout(() => s.remove(), 10000);
     }
+    setInterval(snow, 120);
 </script>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-
 <script>
-// Lista osób
+/* ---- TESTOWA WERSJA BEZ FIREBASE ---- */
+
 const osoby = [
-  "Bogusia", "Bronek", "Małgorzata", "Paweł", "Julia", "Kamil",
-  "Agnieszka", "Ewelina", "Mariusz", "Lucyna", "Daniel"
+  "Bogusia", "Bronek", "Małgorzata", "Paweł",
+  "Julia", "Kamil", "Agnieszka", "Ewelina",
+  "Mariusz", "Lucyna", "Daniel"
 ];
 
-// Blokady
 const blokady = {
   "Bogusia": ["Bronek"],
   "Bronek": ["Bogusia"],
@@ -157,44 +192,18 @@ const blokady = {
   "Daniel": ["Lucyna"]
 };
 
-// Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyDCCpqTPCnMZ7Sda3lS1sC82q9HfZ9BRVc",
-  authDomain: "losowanie-cd801.firebaseapp.com",
-  databaseURL: "https://losowanie-cd801-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "losowanie-cd801",
-  storageBucket: "losowanie-cd801.firebasestorage.app",
-  messagingSenderId: "309302443421",
-  appId: "1:309302443421:web:7bc0bb3e5ce619d7c55275",
-  measurementId: "G-SWK87N4Y4Q"
-};
+// lokalna pamięć aby wszystko działało od razu
+let wyniki = {};
+let dostepni = [...osoby];
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-async function pobierzDane() {
-  const snap = await db.ref("losowanie").get();
-  if (!snap.exists()) {
-    await db.ref("losowanie").set({
-      wyniki: {},
-      dostepni: osoby
-    });
-    return { wyniki: {}, dostepni: [...osoby] };
-  }
-  return snap.val();
-}
-
-async function zapiszDane(wyniki, dostepni) {
-  await db.ref("losowanie").set({ wyniki, dostepni });
-}
-
-async function losuj() {
+function losuj() {
   let imie = document.getElementById("mojeImie").value.trim();
   imie = imie.charAt(0).toUpperCase() + imie.slice(1).toLowerCase();
 
-  if (!osoby.includes(imie)) return alert("Nie ma takiej osoby!");
-
-  let { wyniki, dostepni } = await pobierzDane();
+  if (!osoby.includes(imie)) {
+    alert("Nie ma takiej osoby!");
+    return;
+  }
 
   if (wyniki[imie]) {
     document.getElementById("wynik").innerText =
@@ -202,19 +211,22 @@ async function losuj() {
     return;
   }
 
-  let mozliwe = dostepni.filter(o => o !== imie && !(blokady[imie] || []).includes(o));
-  if (mozliwe.length === 0) return alert("Brak osób do wylosowania!");
+  let mozliwe = dostepni.filter(o =>
+    o !== imie &&
+    !(blokady[imie] || []).includes(o)
+  );
+
+  if (mozliwe.length === 0) {
+    alert("Brak osób do wylosowania!");
+    return;
+  }
 
   let wylosowane = mozliwe[Math.floor(Math.random() * mozliwe.length)];
 
   wyniki[imie] = wylosowane;
   dostepni = dostepni.filter(o => o !== wylosowane);
 
-  await zapiszDane(wyniki, dostepni);
-
-  document.getElementById("wynik").innerText = `🎄 Masz kupić prezent dla: **${wylosowane}**`;
+  document.getElementById("wynik").innerText =
+    `🎄 Masz kupić prezent dla: ${wylosowane}`;
 }
 </script>
-
-</body>
-</html>
