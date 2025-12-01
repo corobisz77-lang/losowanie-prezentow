@@ -1,232 +1,335 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎁 Losowanie prezentów – Świąteczna edycja 🎄</title>
+<meta charset="UTF-8" />
+<title>Losowanie prezentów ONLINE 🎄</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
 <style>
     body {
-        margin: 0;
-        font-family: 'Segoe UI', sans-serif;
-        background: linear-gradient(135deg, #2c3e50, #4b79a1);
-        height: 100vh;
-        overflow-x: hidden;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 20px;
-    }
-
-    /* Świąteczna karta */
-    .kartka {
-        width: 100%;
-        max-width: 420px;
-        padding: 25px;
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 20px;
-        backdrop-filter: blur(7px);
-        box-shadow: 0 0 25px rgba(255,255,255,0.2);
+        font-family: Arial, sans-serif;
         text-align: center;
-        color: #fff;
-        animation: fadeIn 1.2s ease;
-        position: relative;
-        z-index: 2;
+        padding: 20px;
+        background: linear-gradient(to bottom, #b30000, #600000);
+        color: white;
+        overflow-x: hidden;
+        margin: 0;
     }
 
-    @keyframes fadeIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
+    /* KARTA */
+    #karta {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 20px;
+        border-radius: 15px;
+        backdrop-filter: blur(4px);
+        max-width: 380px;
+        margin: auto;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
     }
 
-    h2 {
-        margin-bottom: 10px;
-        text-shadow: 0 0 15px #ffd27f;
-        color: #ffe8c2;
-    }
-
+    /* INPUT */
     input {
-        width: 100%;
+        width: 90%;
         padding: 12px;
         border-radius: 10px;
         border: none;
-        font-size: 16px;
-        outline: none;
+        font-size: 18px;
         margin-top: 10px;
+        text-align: center;
     }
 
+    /* PRZYCISK */
     button {
-        width: 100%;
-        padding: 12px;
+        width: 90%;
         margin-top: 15px;
-        background: #ff4d4d;
-        color: white;
+        padding: 12px;
+        font-size: 20px;
+        background: #ff3333;
         border: none;
         border-radius: 12px;
-        font-size: 18px;
+        color: white;
         cursor: pointer;
         transition: 0.2s;
-        box-shadow: 0 5px 20px rgba(255, 0, 0, 0.4);
     }
 
     button:hover {
-        background: #ff6666;
-        transform: scale(1.03);
+        background: #ff5555;
+        transform: scale(1.05);
     }
 
     #wynik {
         margin-top: 20px;
-        font-size: 20px;
+        font-size: 24px;
         font-weight: bold;
-        color: #ffe8c2;
+        white-space: pre-line;
     }
 
-    /* Światła LED */
-    .led-line {
-        position: absolute;
-        top: 0;
-        left: 0;
+    /* ŚWIATEŁKA LED */
+    #led {
         width: 100%;
-        height: 60px;
+        height: 8px;
+        background: repeating-linear-gradient(
+            90deg,
+            red 0px,
+            red 20px,
+            yellow 20px,
+            yellow 40px,
+            green 40px,
+            green 60px
+        );
+        animation: ledAnim 1s linear infinite;
+        margin-bottom: 15px;
+        border-radius: 4px;
+    }
+
+    @keyframes ledAnim {
+        0% {
+            filter: brightness(0.7);
+        }
+        50% {
+            filter: brightness(1.4);
+        }
+        100% {
+            filter: brightness(0.7);
+        }
+    }
+
+    /* ŚNIEG */
+    .snieg {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        background: white;
+        border-radius: 50%;
+        animation: spadanie linear infinite;
+        opacity: 0.9;
+        z-index: 2;
+    }
+
+    @keyframes spadanie {
+        0% {
+            transform: translateY(-10vh);
+        }
+        100% {
+            transform: translateY(110vh);
+        }
+    }
+
+    /* MIKOŁAJ LECĄCY */
+    #mikoj {
+        position: fixed;
+        top: 20vh;
+        left: -200px;
+        width: 180px;
+        z-index: 3;
+        animation: santaFly 10s linear infinite;
+    }
+
+    @keyframes santaFly {
+        0% { left: -250px; transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { left: 110vw; transform: scale(1); }
+    }
+
+    /* PREZENTY SPADAJĄCE */
+    .prezent {
+        position: fixed;
+        width: 35px;
+        height: 35px;
+        background-size: contain;
+        background-repeat: no-repeat;
+        animation: prezentFall linear infinite;
+        z-index: 2;
+    }
+
+    @keyframes prezentFall {
+        from { transform: translateY(-15vh); }
+        to { transform: translateY(120vh); }
+    }
+
+    /* CHOINKI DÓŁ EKRANU */
+    #choinki {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
         display: flex;
         justify-content: space-around;
-        pointer-events: none;
-        z-index: 3;
-    }
-
-    .led {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        animation: glow 1s infinite alternate;
-    }
-
-    .led:nth-child(odd) { background: red; }
-    .led:nth-child(even) { background: yellow; animation-delay: .5s; }
-
-    @keyframes glow {
-        from { box-shadow: 0 0 10px white; }
-        to { box-shadow: 0 0 25px white; transform: scale(1.2); }
-    }
-
-    /* Większy śnieg */
-    .snowflake {
-        position: fixed;
-        top: -10px;
-        color: white;
-        font-size: 25px;
-        opacity: 0.9;
-        animation-name: snow;
-        animation-timing-function: linear;
-        animation-iteration-count: infinite;
         z-index: 1;
     }
 
-    @keyframes snow {
-        0% { transform: translateY(0) rotate(0deg); }
-        100% { transform: translateY(100vh) rotate(360deg); }
+    .choinka {
+        width: 90px;
+        animation: wiggle 3s ease-in-out infinite;
+    }
+
+    @keyframes wiggle {
+        0% { transform: rotate(-2deg); }
+        50% { transform: rotate(2deg); }
+        100% { transform: rotate(-2deg); }
     }
 </style>
 </head>
 <body>
 
+<!-- MIKOŁAJ -->
+<img id="mikoj" src="https://i.imgur.com/9N2YqTu.png" />
+
 <!-- ŚWIATEŁKA -->
-<div class="led-line">
-    <div class="led"></div><div class="led"></div><div class="led"></div>
-    <div class="led"></div><div class="led"></div><div class="led"></div>
-    <div class="led"></div><div class="led"></div><div class="led"></div>
-</div>
+<div id="led"></div>
 
-<!-- MUZYKA -->
-<audio id="muzyka" autoplay loop>
-    <source src="https://cdn.pixabay.com/download/audio/2022/12/07/audio_08fd5520ba.mp3?filename=christmas-magic-126379.mp3" type="audio/mpeg">
-</audio>
-<script>
-    document.getElementById("muzyka").volume = 0.15;
-</script>
+<h2>🎁 Losowanie prezentów – ONLINE</h2>
 
-<div class="kartka">
-    <h2>🎅 Losowanie prezentów 🎄</h2>
-    <p>Wpisz swoje imię:</p>
-    <input id="mojeImie" type="text" />
-
-    <button onclick="losuj()">🎁 Wylosuj </button>
-
+<div id="karta">
+    <p>Wpisz swoje imię (dokładnie jak na liście):</p>
+    <input id="mojeImie" type="text" placeholder="Np. Paweł" />
+    <button onclick="losuj()">Wylosuj 🎄</button>
     <div id="wynik"></div>
 </div>
 
-<script>
-    /* DUŻY ŚNIEG */
-    function snow() {
-        let s = document.createElement("div");
-        s.className = "snowflake";
-        s.innerHTML = "❄";
-        s.style.left = Math.random() * 100 + "vw";
-        s.style.animationDuration = 6 + Math.random() * 4 + "s";
-        s.style.fontSize = 20 + Math.random() * 20 + "px";
-        document.body.appendChild(s);
-        setTimeout(() => s.remove(), 10000);
-    }
-    setInterval(snow, 120);
-</script>
+<!-- CHOINKI -->
+<div id="choinki">
+    <img class="choinka" src="https://i.imgur.com/4lGRtJj.png" />
+    <img class="choinka" src="https://i.imgur.com/4lGRtJj.png" />
+    <img class="choinka" src="https://i.imgur.com/4lGRtJj.png" />
+</div>
 
 <script>
-/* ---- TESTOWA WERSJA BEZ FIREBASE ---- */
-
+// ───────── LISTA OSÓB ─────────
 const osoby = [
-  "Bogusia", "Bronek", "Małgorzata", "Paweł",
-  "Julia", "Kamil", "Agnieszka", "Ewelina",
-  "Mariusz", "Lucyna", "Daniel"
+    "Bogusia", "Bronek", "Małgorzata", "Paweł", "Julia", "Kamil",
+    "Agnieszka", "Ewelina", "Mariusz", "Lucyna", "Daniel"
 ];
 
+// ───────── BLOKADY ─────────
 const blokady = {
-  "Bogusia": ["Bronek"],
-  "Bronek": ["Bogusia"],
-  "Paweł": ["Małgorzata"],
-  "Małgorzata": ["Paweł"],
-  "Julia": ["Kamil"],
-  "Kamil": ["Julia"],
-  "Ewelina": ["Mariusz"],
-  "Mariusz": ["Ewelina"],
-  "Lucyna": ["Daniel"],
-  "Daniel": ["Lucyna"]
+    "Bogusia": ["Bronek"],
+    "Bronek": ["Bogusia"],
+    "Paweł": ["Małgorzata"],
+    "Małgorzata": ["Paweł"],
+    "Julia": ["Kamil"],
+    "Kamil": ["Julia"],
+    "Ewelina": ["Mariusz"],
+    "Mariusz": ["Ewelina"],
+    "Lucyna": ["Daniel"],
+    "Daniel": ["Lucyna"]
 };
 
-// lokalna pamięć aby wszystko działało od razu
-let wyniki = {};
-let dostepni = [...osoby];
+// ───────── FIREBASE CONFIG ─────────
+const firebaseConfig = {
+    apiKey: "AIzaSyDCCpqTPCnMZ7Sda3lS1sC82q9HfZ9BRVc",
+    authDomain: "losowanie-cd801.firebaseapp.com",
+    databaseURL: "https://losowanie-cd801-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "losowanie-cd801",
+    storageBucket: "losowanie-cd801.firebasestorage.app",
+    messagingSenderId: "309302443421",
+    appId: "1:309302443421:web:7bc0bb3e5ce619d7c55275"
+};
 
-function losuj() {
-  let imie = document.getElementById("mojeImie").value.trim();
-  imie = imie.charAt(0).toUpperCase() + imie.slice(1).toLowerCase();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-  if (!osoby.includes(imie)) {
-    alert("Nie ma takiej osoby!");
-    return;
-  }
+// ───────── TRYB B – ZAPAMIĘTUJE IMIĘ I BLOKUJE ZMIANĘ ─────────
+window.onload = () => {
+    const saved = localStorage.getItem("moje_imie");
+    if (saved) {
+        document.getElementById("mojeImie").value = saved;
+        document.getElementById("mojeImie").disabled = true;
+    }
+};
 
-  if (wyniki[imie]) {
-    document.getElementById("wynik").innerText =
-      `🎁 Wcześniej wylosowałeś: ${wyniki[imie]}`;
-    return;
-  }
+// ───────── POBIERANIE DANYCH ─────────
+async function pobierzDane() {
+    const snap = await db.ref("losowanie").get();
 
-  let mozliwe = dostepni.filter(o =>
-    o !== imie &&
-    !(blokady[imie] || []).includes(o)
-  );
-
-  if (mozliwe.length === 0) {
-    alert("Brak osób do wylosowania!");
-    return;
-  }
-
-  let wylosowane = mozliwe[Math.floor(Math.random() * mozliwe.length)];
-
-  wyniki[imie] = wylosowane;
-  dostepni = dostepni.filter(o => o !== wylosowane);
-
-  document.getElementById("wynik").innerText =
-    `🎄 Masz kupić prezent dla: ${wylosowane}`;
+    if (!snap.exists()) {
+        await db.ref("losowanie").set({
+            wyniki: {},
+            dostepni: osoby
+        });
+        return { wyniki: {}, dostepni: [...osoby] };
+    }
+    return snap.val();
 }
+
+async function zapiszDane(wyniki, dostepni) {
+    await db.ref("losowanie").set({ wyniki, dostepni });
+}
+
+// ───────── LOSOWANIE ─────────
+async function losuj() {
+    let imie = document.getElementById("mojeImie").value.trim();
+    imie = imie.charAt(0).toUpperCase() + imie.slice(1).toLowerCase();
+
+    if (!osoby.includes(imie)) {
+        alert("Nie ma takiej osoby!");
+        return;
+    }
+
+    localStorage.setItem("moje_imie", imie);
+    document.getElementById("mojeImie").disabled = true;
+
+    let { wyniki, dostepni } = await pobierzDane();
+
+    if (wyniki[imie]) {
+        document.getElementById("wynik").innerText =
+            "🎁 Już losowałeś!\nTwój prezent kupujesz dla: " + wyniki[imie];
+        return;
+    }
+
+    let mozliwe = dostepni.filter(
+        o => o !== imie && !(blokady[imie] || []).includes(o)
+    );
+
+    if (mozliwe.length === 0) {
+        alert("Brak osób do wylosowania!");
+        return;
+    }
+
+    let wylosowane = mozliwe[Math.floor(Math.random() * mozliwe.length)];
+
+    wyniki[imie] = wylosowane;
+    dostepni = dostepni.filter(o => o !== wylosowane);
+
+    await zapiszDane(wyniki, dostepni);
+
+    document.getElementById("wynik").innerText =
+        "🎄 Masz kupić prezent dla: " + wylosowane;
+}
+
+// ───────── ŚNIEG ─────────
+function snieg() {
+    for (let i = 0; i < 60; i++) {
+        let s = document.createElement("div");
+        s.className = "snieg";
+        s.style.left = Math.random() * 100 + "vw";
+        s.style.animationDuration = 3 + Math.random() * 5 + "s";
+        document.body.appendChild(s);
+    }
+}
+snieg();
+
+// ───────── PREZENTY ─────────
+function prezenty() {
+    const ikony = [
+        "https://i.imgur.com/9mYONuk.png",
+        "https://i.imgur.com/1MqFqHh.png",
+        "https://i.imgur.com/M3vbYv9.png"
+    ];
+
+    for (let i = 0; i < 8; i++) {
+        let p = document.createElement("div");
+        p.className = "prezent";
+        p.style.left = Math.random() * 100 + "vw";
+        p.style.backgroundImage = `url(${ikony[Math.floor(Math.random()*ikony.length)]})`;
+        p.style.animationDuration = 4 + Math.random() * 6 + "s";
+        p.style.width = p.style.height = 30 + Math.random() * 20 + "px";
+        document.body.appendChild(p);
+    }
+}
+prezenty();
 </script>
+</body>
+</html>
