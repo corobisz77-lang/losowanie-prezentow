@@ -1,11 +1,324 @@
-<script>
-/* ---- POPRAWIONE: bez wcześniejszego blokowania input, lepszy handling błędów ---- */
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<title>Losowanie prezentów ONLINE 🎄</title>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 20px;
+        background: linear-gradient(to bottom, #b30000, #600000);
+        color: white;
+        overflow-x: hidden;
+        margin: 0;
+    }
+
+    /* KARTA */
+    #karta {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 20px;
+        border-radius: 15px;
+        backdrop-filter: blur(4px);
+        max-width: 380px;
+        margin: auto;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+
+    /* INPUT */
+    input {
+        width: 90%;
+        padding: 12px;
+        border-radius: 10px;
+        border: none;
+        font-size: 18px;
+        margin-top: 10px;
+        text-align: center;
+    }
+
+    /* PRZYCISK */
+    button {
+        width: 90%;
+        margin-top: 15px;
+        padding: 12px;
+        font-size: 20px;
+        background: #ff3333;
+        border: none;
+        border-radius: 12px;
+        color: white;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        background: #ff5555;
+        transform: scale(1.05);
+    }
+
+    #wynik {
+        margin-top: 20px;
+        font-size: 24px;
+        font-weight: bold;
+        white-space: pre-line;
+    }
+
+    /* ŚWIATEŁKA LED */
+    #led {
+        width: 100%;
+        height: 8px;
+        background: repeating-linear-gradient(
+            90deg,
+            red 0px,
+            red 20px,
+            yellow 20px,
+            yellow 40px,
+            green 40px,
+            green 60px
+        );
+        animation: ledAnim 1s linear infinite;
+        margin-bottom: 15px;
+        border-radius: 4px;
+    }
+
+    @keyframes ledAnim {
+        0% {
+            filter: brightness(0.7);
+        }
+        50% {
+            filter: brightness(1.4);
+        }
+        100% {
+            filter: brightness(0.7);
+        }
+    }
+
+    /* ŚNIEG */
+    .snieg {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        background: white;
+        border-radius: 50%;
+        animation: spadanie linear infinite;
+        opacity: 0.9;
+        z-index: 2;
+    }
+
+    @keyframes spadanie {
+        0% {
+            transform: translateY(-10vh);
+        }
+        100% {
+            transform: translateY(110vh);
+        }
+    }
+
+    /* MIKOŁAJ LECĄCY */
+    #mikoj {
+        position: fixed;
+        top: 20vh;
+        left: -200px;
+        width: 180px;
+        z-index: 3;
+        animation: santaFly 10s linear infinite;
+    }
+
+    @keyframes santaFly {
+        0% { left: -250px; transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { left: 110vw; transform: scale(1); }
+    }
+
+    /* PREZENTY SPADAJĄCE */
+    .prezent {
+        position: fixed;
+        width: 35px;
+        height: 35px;
+        background-size: contain;
+        background-repeat: no-repeat;
+        animation: prezentFall linear infinite;
+        z-index: 2;
+    }
+
+    @keyframes prezentFall {
+        from { transform: translateY(-15vh); }
+        to { transform: translateY(120vh); }
+    }
+
+    /* CHOINKI DÓŁ EKRANU */
+    #choinki {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        display: flex;
+        justify-content: space-around;
+        z-index: 1;
+    }
+
+    .choinka {
+        width: 90px;
+        animation: wiggle 3s ease-in-out infinite;
+    }
+
+    @keyframes wiggle {
+        0% { transform: rotate(-2deg); }
+        50% { transform: rotate(2deg); }
+        100% { transform: rotate(-2deg); }
+    }
+</style>
+</head>
+<body>
+
+<!-- MIKOŁAJ -->
+<img id="mikoj" src="https://i.imgur.com/9N2YqTu.png" />
+
+<!-- ŚWIATEŁKA -->
+<div id="led"></div>
+
+<h2>🎁 Losowanie prezentów – ONLINE</h2>
+
+<div id="karta">
+    <p>Wpisz swoje imię (dokładnie jak na liście):</p>
+    <input id="mojeImie" type="text" placeholder="Np. Paweł" />
+    <button onclick="losuj()">Wylosuj 🎄</button>
+    <div id="wynik"></div>
+</div>
+
+<!-- CHOINKI -->
+<div id="choinki">
+    <img class="choinka" src="https://i.imgur.com/4lGRtJj.png" />
+    <img class="choinka" src="https://i.imgur.com/4lGRtJj.png" />
+    <img class="choinka" src="https://i.imgur.com/4lGRtJj.png" />
+</div>
+
+<script>
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Losowanie prezentów ONLINE 🎄</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(to bottom, #b30000, #600000);
+    color: white;
+    overflow-x: hidden;
+}
+
+/* Karta */
+#karta {
+    background: rgba(255,255,255,0.15);
+    padding: 20px;
+    border-radius: 15px;
+    backdrop-filter: blur(4px);
+    max-width: 380px;
+    margin: auto;
+    box-shadow: 0 0 20px rgba(255,255,255,0.3);
+}
+
+/* Input */
+input {
+    width: 90%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    font-size: 18px;
+    margin-top: 10px;
+}
+
+/* Przycisk */
+button {
+    width: 90%;
+    margin-top: 15px;
+    padding: 12px;
+    font-size: 20px;
+    background: #ff3333;
+    border: none;
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+    transition: 0.2s;
+}
+button:hover {
+    background: #ff5555;
+    transform: scale(1.05);
+}
+
+/* Wynik */
+#wynik {
+    margin-top: 20px;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+/* Śnieg */
+.snieg {
+    position: fixed;
+    width: 6px;
+    height: 6px;
+    background: white;
+    border-radius: 50%;
+    animation: spadanie linear infinite;
+    opacity: 0.9;
+}
+@keyframes spadanie {
+    0% { transform: translateY(-10vh); }
+    100% { transform: translateY(110vh); }
+}
+
+/* Światełka LED */
+#led {
+    width: 100%;
+    height: 8px;
+    background: repeating-linear-gradient(90deg,
+        red 0px, red 20px,
+        yellow 20px, yellow 40px,
+        green 40px, green 60px
+    );
+    animation: ledAnim 1s linear infinite;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+@keyframes ledAnim {
+    0% { filter: brightness(0.7); }
+    50% { filter: brightness(1.4); }
+    100% { filter: brightness(0.7); }
+}
+</style>
+</head>
+<body>
+
+<div id="led"></div>
+
+<h2>🎁 Losowanie prezentów – ONLINE</h2>
+
+<div id="karta">
+    <p>Wpisz swoje imię (dokładnie jak na liście):</p>
+    <input id="mojeImie" type="text" placeholder="Np. Paweł">
+    <button onclick="losuj()">Wylosuj 🎄</button>
+    <div id="wynik"></div>
+</div>
+
+<script>
+// ───────── LISTA OSÓB ─────────
 const osoby = [
     "Bogusia","Bronek","Małgorzata","Paweł","Julia","Kamil",
     "Agnieszka","Ewelina","Mariusz","Lucyna","Daniel"
 ];
 
+// ───────── BLOKADY ─────────
 const blokady = {
     "Bogusia":["Bronek"],
     "Bronek":["Bogusia"],
@@ -19,117 +332,96 @@ const blokady = {
     "Daniel":["Lucyna"]
 };
 
+// ───────── KONFIGURACJA FIREBASE ─────────
 const firebaseConfig = {
-    apiKey: "AIzaSyDCCpqTPCnMZ7Sda3lS1sC82q9HfZ9BRVc",
-    authDomain: "losowanie-cd801.firebaseapp.com",
-    databaseURL: "https://losowanie-cd801-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "losowanie-cd801",
-    storageBucket: "losowanie-cd801.firebasestorage.app",
-    messagingSenderId: "309302443421",
-    appId: "1:309302443421:web:7bc0bb3e5ce619d7c55275"
+  apiKey: "AIzaSyDCCpqTPCnMZ7Sda3lS1sC82q9HfZ9BRVc",
+  authDomain: "losowanie-cd801.firebaseapp.com",
+  databaseURL: "https://losowanie-cd801-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "losowanie-cd801",
+  storageBucket: "losowanie-cd801.firebasestorage.app",
+  messagingSenderId: "309302443421",
+  appId: "1:309302443421:web:7bc0bb3e5ce619d7c55275"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Wyświetl komunikat w #wynik
-function showMessage(text, isError = false) {
-    const el = document.getElementById("wynik");
-    el.style.color = isError ? "#ffdddd" : "#ffe8c2";
-    el.innerText = text;
-}
+// ───────── FUNKCJE FIREBASE ─────────
 
-// Pobierz dane z Firebase, ale obsłuż błędy
 async function pobierzDane() {
-    try {
-        const snap = await db.ref("losowanie").get();
-        if (!snap.exists()) {
-            // Jeśli brak danych, utwórz startową strukturę
-            const start = { wyniki: {}, dostepni: [...osoby] };
-            await db.ref("losowanie").set(start);
-            return start;
-        }
-        return snap.val();
-    } catch (err) {
-        console.error("Błąd pobierania z Firebase:", err);
-        // Zwróć lokalny stan jako fallback żeby UI działał (ale nie zapisze nic do DB)
-        return { wyniki: {}, dostepni: [...osoby], _error: err };
+    const snap = await db.ref("losowanie").get();
+
+    if (!snap.exists()) {
+        await db.ref("losowanie").set({
+            wyniki: {},
+            dostepni: osoby
+        });
+        return { wyniki:{}, dostepni:[...osoby] };
     }
+
+    return snap.val();
 }
 
-// Zapisz dane do Firebase z obsługą błędów
 async function zapiszDane(wyniki, dostepni) {
-    try {
-        await db.ref("losowanie").set({ wyniki, dostepni });
-        return { ok: true };
-    } catch (err) {
-        console.error("Błąd zapisu do Firebase:", err);
-        return { ok: false, error: err };
-    }
+    await db.ref("losowanie").set({ wyniki, dostepni });
 }
 
-// Przy ładowaniu strony: jeśli localStorage ma imię, wstaw je ale NIE BLOKUJ od razu.
-// Blokadę ustawimy dopiero po UDANYM zapisie do Firebase.
-window.addEventListener("load", () => {
-    const saved = localStorage.getItem("moje_imie");
-    if (saved) {
-        document.getElementById("mojeImie").value = saved;
-        // NIE disable tutaj — dopiero po pewnym potwierdzeniu zapisu
-    }
-});
+// ───────── LOSOWANIE ─────────
 
-// Główna funkcja losowania
 async function losuj() {
-    const input = document.getElementById("mojeImie");
-    let imie = input.value.trim();
+    let imie = document.getElementById("mojeImie").value.trim();
     imie = imie.charAt(0).toUpperCase() + imie.slice(1).toLowerCase();
 
-    if (!imie) {
-        alert("Wpisz swoje imię!");
-        return;
-    }
     if (!osoby.includes(imie)) {
         alert("Nie ma takiej osoby!");
         return;
     }
 
-    showMessage("🔄 Sprawdzam dane...");
+    let { wyniki, dostepni } = await pobierzDane();
 
-    // Pobierz dane z bazy (lub fallback)
-    const data = await pobierzDane();
-
-    if (data._error) {
-        // Jeśli pobieranie się nie powiodło — poinformuj użytkownika i nie blokuj inputa
-        showMessage("❗ Nie można połączyć się z bazą. Sprawdź internet / rules Firebase.", true);
-        return;
-    }
-
-    const wyniki = data.wyniki || {};
-    let dostepni = Array.isArray(data.dostepni) ? data.dostepni : [...osoby];
-
-    // Jeśli już w bazie osoba ma wynik — pokaż go i zakończ (bez blokowania inputu jeszcze)
+    // jeśli już wcześniej losował → pokaż wynik
     if (wyniki[imie]) {
-        showMessage(`🎁 Już losowałeś!\nTwój prezent kupujesz dla: ${wyniki[imie]}`);
-        // Zapisz imię lokalnie i zablokuj pole — bo użytkownik już ma wynik
-        localStorage.setItem("moje_imie", imie);
-        input.disabled = true;
+        document.getElementById("wynik").innerText =
+            "🎁 Już losowałeś!\nTwój prezent kupujesz dla: " + wyniki[imie];
         return;
     }
 
-    // Wylicz możliwe osoby
-    let mozliwe = dostepni.filter(o => o !== imie && !(blokady[imie] || []).includes(o));
+    // lista dozwolonych osób
+    let mozliwe = dostepni.filter(o =>
+        o !== imie &&
+        !(blokady[imie] || []).includes(o)
+    );
+
     if (mozliwe.length === 0) {
-        showMessage("❗ Brak dostępnych osób do wylosowania.", true);
+        alert("Brak osób do wylosowania!");
         return;
     }
 
-    // Losuj
-    const wylosowane = mozliwe[Math.floor(Math.random() * mozliwe.length)];
+    let wylosowane = mozliwe[Math.floor(Math.random() * mozliwe.length)];
 
-    // Zaktualizuj lokalnie
     wyniki[imie] = wylosowane;
     dostepni = dostepni.filter(o => o !== wylosowane);
 
-    showMessage("🔁 Zapisuję wynik...");
+    await zapiszDane(wyniki, dostepni);
 
-    // Spróbuj zapisać w Firebase; jeśli zapis się nie uda, cofnij lokalne zmiany i poinformuj
+    document.getElementById("wynik").innerText =
+        "🎄 Masz kupić prezent dla: " + wylosowane;
+}
+
+
+// ───────── GENERATOR ŚNIEGU ─────────
+function snieg() {
+    for (let i = 0; i < 50; i++) {
+        let s = document.createElement("div");
+        s.className = "snieg";
+        s.style.left = Math.random() * 100 + "vw";
+        s.style.animationDuration = (3 + Math.random() * 5) + "s";
+        s.style.opacity = Math.random();
+        document.body.appendChild(s);
+    }
+}
+snieg();
+</script>
+
+</body>
+</html>
